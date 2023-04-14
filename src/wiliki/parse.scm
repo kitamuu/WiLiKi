@@ -65,7 +65,9 @@
                  [(? string?) (cons tree seed)]
                  [('@ . _)  seed]  ;; skip attr node
                  [('@@ . _) seed]  ;; skip aux node
-                 [('wiki-name name) (cons name seed)]
+                 [('wiki-name name) (if (string-prefix? "$$" name)
+                                      seed
+                                      (cons name seed))]
                  [('wiki-macro . _) seed]
                  [(name . nodes) (fold tree-fold seed nodes)]
                  [else seed]))
@@ -118,9 +120,9 @@
              [name   (match 8)])
          (let1 url (if server #"~|scheme|:~|server|~|path|" path)
            (if (and openp name)
-             (cons `(a (@ (href ,url)) ,name) seed)
+             (cons `(a (@ (href ,url) (rel "nofollow noopener") (target "_blank")) ,name) seed)
              (list* (if openp "[" "")
-                    `(a (@ (href ,url)) ,scheme ":" ,(or server "") ,path)
+                    `(a (@ (href ,url) (rel "nofollow noopener") (target "_blank")) ,scheme ":" ,(or server "") ,path)
                     seed)))))
      seed line))
   (define (bracket line seed)
@@ -244,7 +246,7 @@
   ;; Heading
   (define (heading m ctx cont)
     (let* ([h-lev (min (h-level m) 5)]
-           [elm   (ref '(_ h2 h3 h4 h5 h6) h-lev)]
+           [elm   (ref '(_ h1 h2 h3 h4 h5) h-lev)]
            [hstr  (m 'after)]
            [new-ctx (acons elm hstr ctx)])
       (cont (next-token new-ctx)

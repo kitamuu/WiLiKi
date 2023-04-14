@@ -55,7 +55,7 @@
 (generate-passfile)
 
 (test* "initial blog"
-       '(html (head (title "TopPage") ?*) ?*)
+       '(html ?@ (head (title "TopPage") ?*) ?*)
        (values-ref (run-cgi-script->sxml *cgi-path*) 1)
        (test-sxml-select-matcher '(html)))
 
@@ -79,7 +79,7 @@
 
 (test* "new entry"
        '(("status" "302 Moved")
-         ("location" "http://localhost/wiliki.cgi?20230101-new-entry"))
+         ("location" "https://localhost/wiliki.cgi?20230101-new-entry"))
        (values-ref (run-cgi-script->string
                     *cgi-path*
                     :environment `((REQUEST_METHOD . "POST")
@@ -93,7 +93,7 @@
 
 (test* "new entry 2"
        '(("status" "302 Moved")
-         ("location" "http://localhost/wiliki.cgi?20230102-another-entry"))
+         ("location" "https://localhost/wiliki.cgi?20230102-another-entry"))
        (values-ref (run-cgi-script->string
                     *cgi-path*
                     :environment `((REQUEST_METHOD . "POST")

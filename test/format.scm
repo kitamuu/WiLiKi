@@ -129,19 +129,19 @@
     (page "~~~foo~~~bar~~~"))
 
 
-(tp "url" '(result (p (a (@ (href "http://foo")) "http://foo")))
+(tp "url" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo")) "http://foo")))
     (page "http://foo"))
-(tp "url" '(result (p (a (@ (href "http://foo?abc")) "http://foo?abc")))
+(tp "url" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo?abc")) "http://foo?abc")))
     (page "http://foo?abc"))
-(tp "url" '(result (p (a (@ (href "http://foo#abc")) "http://foo#abc")))
+(tp "url" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo#abc")) "http://foo#abc")))
     (page "http://foo#abc"))
-(tp "url" '(result (p (a (@ (href "http://foo/?bar#abc")) "http://foo/?bar#abc")))
+(tp "url" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo/?bar#abc")) "http://foo/?bar#abc")))
     (page "http://foo/?bar#abc"))
 (tp "url" '(result (p "("
-                      (a (@ (href "http://foo/?bar")) "http://foo/?bar")
+                      (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo/?bar")) "http://foo/?bar")
                       " )\n"))
     (page "(http://foo/?bar )"))
-(tp "url" '(result (p "aaa " (a (@ (href "https://foo")) "https://foo")))
+(tp "url" '(result (p "aaa " (a (@ (target "_blank") (rel "nofollow noopener") (href "https://foo")) "https://foo")))
     (page "aaa https://foo "))
 (tp "url" '(result (p (a (@ (href "mailto:aa@bb.cc")) "mail here")))
     (page "[mailto:aa@bb.cc mail here]"))
@@ -151,15 +151,15 @@
 (tp "br" '(result (p (em "aaa" (br) "bbb")))
     (page "''aaa~%bbb''"))
 
-(tp "anchor" '(result (p (a (@ (href "http://foo")) "bar")))
+(tp "anchor" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo")) "bar")))
     (page "[http://foo bar]"))
-(tp "anchor" '(result (p (a (@ (href "http://foo?bar")) "bar")))
+(tp "anchor" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo?bar")) "bar")))
     (page "[http://foo?bar bar]"))
-(tp "anchor" '(result (p (a (@ (href "http://foo#bar")) "bar")))
+(tp "anchor" '(result (p (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo#bar")) "bar")))
     (page "[http://foo#bar bar]"))
 
 (tp "nested" '(result (p (strong "bb "
-                                 (a (@ (href "http://foo")) "baz")
+                                 (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo")) "baz")
                                  "zz")))
     (page "'''bb [http://foo baz]zz'''"))
 
@@ -422,8 +422,8 @@
           "ggg"
           ""
           "hhh"))
-(tp "dl & inline" '(result (dl (dt (a (@ (href "http://foo")) "http://foo"))
-                               (dd (p "aaa\nbb" (em "bbb")))))
+(tp "dl & inline" '(result (dl (dt (a (@ (target "_blank") (rel "nofollow noopener") (href "http://foo")) "http://foo"))
+                                (dd (p "aaa\nbb" (em "bbb")))))
     (page ":http://foo:aaa"
           "bb''bbb''"))
 (tp "dl & other list"
@@ -643,27 +643,27 @@
   (wiliki:calculate-heading-id lis))
 
 (tp "headings"
-    `(result (h2 (@ (id ,(hid "aa"))) "aa\n")
-             (h3 (@ (id ,(hid "bb" "aa"))) "bb\n")
-             (h4 (@ (id ,(hid "cc" "bb" "aa"))) "cc\n")
-             (h5 (@ (id ,(hid "dd" "cc" "bb" "aa"))) "dd\n")
-             (h6 (@ (id ,(hid "ee" "dd" "cc" "bb" "aa"))) "ee\n"))
+    `(result (h1 "aa\n")
+             (h2 (@ (id ,(hid "bb"))) "bb\n")
+             (h3 (@ (id ,(hid "cc" "bb"))) "cc\n")
+             (h4 (@ (id ,(hid "dd" "cc" "bb"))) "dd\n")
+             (h5 (@ (id ,(hid "ee" "dd" "cc" "bb"))) "ee\n"))
     (page "* aa" "** bb" "*** cc" "**** dd" "***** ee"))
 (tp "headings (id)"
-    `(result (h2 (@ (id ,(hid "aa"))) "aa\n")
-             (h5 (@ (id ,(hid "bb" "aa"))) "bb\n")
-             (h3 (@ (id ,(hid "cc" "aa"))) "cc\n")
-             (h5 (@ (id ,(hid "bb" "cc" "aa"))) "bb\n")
-             (h2 (@ (id ,(hid "bb"))) "bb\n")
-             (h3 (@ (id ,(hid "cc" "bb"))) "cc\n"))
+    `(result (h1 "aa\n")
+             (h4 (@ (id ,(hid "bb"))) "bb\n")
+             (h2 (@ (id ,(hid "cc"))) "cc\n")
+             (h4 (@ (id ,(hid "bb" "cc"))) "bb\n")
+             (h1 "bb\n")
+             (h2 (@ (id ,(hid "cc"))) "cc\n"))
     (page "* aa" "**** bb" "** cc" "**** bb" "* bb" "** cc"))
 (tp "headings&list, pre"
     `(result (p "aaa\n")
-             (h2 (@ (id ,(hid "aa"))) "aa\n")
+             (h1 "aa\n")
              (ul (li "bb\n"))
-             (h3 (@ (id ,(hid "cc" "aa"))) "cc\n")
+             (h2 (@ (id ,(hid "cc"))) "cc\n")
              (pre " dd\n")
-             (h4 (@ (id ,(hid "ee" "cc" "aa"))) "ee\n"))
+             (h3 (@ (id ,(hid "ee" "cc"))) "ee\n"))
     (page "aaa" "* aa" "- bb" "** cc" " dd" "*** ee"))
 
 ;;------------------------------------------------

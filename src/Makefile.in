@@ -17,6 +17,7 @@ GAUCHE_CESCONV = "@GAUCHE_CESCONV@"
 INSTALL        = "@GAUCHE_INSTALL@"
 
 SCMFILES = wiliki.scm \
+	   blog.scm \
 	   wiliki/auth.scm \
 	   wiliki/core.scm \
 	   wiliki/db.scm \
