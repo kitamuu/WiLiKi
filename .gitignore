@@ -2,6 +2,7 @@ Makefile
 VERSION
 WiLiKi.gpd
 config.log
+GEMINI.md
 
 po/*.gmo
 
