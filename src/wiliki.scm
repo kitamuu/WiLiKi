@@ -27,11 +27,13 @@
 (define-module wiliki
   (use dbm)
   (use gauche.charconv)
+  (use gauche.parameter)
   (use gauche.sequence)
   (use gauche.version)
   (use rfc.uri)
   (use scheme.list)
   (use srfi.13)
+  (use srfi.27)
   (use text.gettext)
   (use text.html-lite)
   (use text.tr)
@@ -59,10 +61,12 @@
           )
   )
 (select-module wiliki)
+(random-source-randomize! default-random-source)
 
 ;; Load extra code only when needed.
 (autoload wiliki.rss     rss-page)
 (autoload wiliki.pasttime how-long-since)
+(autoload wiliki.macro decompose-key entry-title)
 (autoload wiliki.log     wiliki-log-create wiliki-log-pick
                          wiliki-log-pick-from-file
                          wiliki-log-parse-entry wiliki-log-entries-after
@@ -146,11 +150,11 @@
              (string-prefix? "$" pagename))
          (error "Invalid page name" pagename)]
         [else
-         (html-page
-          (make <wiliki-page>
-            :title (string-append ($$ "Nonexistent page: ") pagename)
-            :content `((p ,($$ "Create a new page: ")
-                          ,@(wiliki:format-wikiname pagename)))))]
+         `(,(cgi-header :status 404)
+           ,(html:html
+             (html:head (html:title "Entry Not Found"))
+             (html:body
+               (html:p #"~|pagename| is not found"))))]
         ))
 
 (define-wiliki-action lv :read (pagename)
@@ -211,12 +215,14 @@
                              (format ($$ "Search results of \"~a\"") key))
        :command (format #f "c=s&key=~a" (html-escape-string key))
        :content
-       `((ul
-          ,@(map (^p `(li
-                       ,(wiliki:wikiname-anchor (car p))
-                       ,(or (and-let* ([mtime (get-keyword :mtime (cdr p) #f)])
-                              #"(~(how-long-since mtime))")
-                            "")))
+       `((h2 ,(format (gettext "~sの検索結果") key))
+	 (ul
+           ,@(map (^p
+                  (let1 page (wiliki:db-get (car p))
+                    `(li (a (@ (href ,#"~(wiliki:url)/~(car p)"))
+                        ,(apply format "~4d/~2,'0d/~2,'0d" (decompose-key (car p))) " : "
+                            ,(entry-title (car p) (~ page 'content))))
+		    ))
                  (wiliki:db-search-content key))))
        ))
     (html-page
@@ -326,14 +332,14 @@
 
 (define (wiliki:search-box :optional (key #f))
   `((form (@ (method POST) (action ,(cgi-name-of (wiliki)))
-             (style "margin:0pt; padding:0pt"))
+             (class "search-form"))
           (input (@ (type hidden) (name c) (value s)))
-          (input (@ (type text) (name key) (size 15)
+          (label (input (@ (type text) (name key) (size 18) (placeholder "キーワード検索")
                     ,@(cond-list
                        [key `(value ,key)])
-                    (class "search-box")))
-          (input (@ (type submit) (name search) (value ,($$ "Search"))
-                    (class "navi-button")))
+                    (class "search-box"))))
+          (button (@ (type submit) (name search)
+                    (class "search-button")))
           )))
 
 (define (wiliki:breadcrumb-links page delim)
@@ -382,25 +388,29 @@
     '()))
 
 (define (wiliki:default-head-elements page opts)
-  (let1 w (wiliki)
+  (let* ([w (wiliki)]
+         [is-top (or (not (~ page'key)) (equal? (~ page'key) (~ w'top-page)))]
+         [url (if is-top (wiliki:url :top) #"~(wiliki:url :full)/~(~ page'key)")])
     `((title ,(wiliki:format-head-title (the-formatter) page))
       ,@(cond-list
-         [w `(base (@ (href ,(wiliki:url :full))))]
+         [w `(base (@ (href ,(wiliki:url :top))))]
          [w `(link (@ (rel "alternate") (type "application/rss+xml")
                       (title "RSS") (href ,(wiliki:url :full "c=rss"))))]
-         [w `(meta (@ (property "og:title")
-                      (content ,(wiliki:format-head-title (the-formatter) page))))]
-         [w `(meta (@ (property "og:url") (content ,(wiliki:url :full))))]
-         [w `(meta (@ (property "og:type") (content "website")))]
-         [(and w (~ w'description))
-          => (^[desc]
-               `(meta (@ (property "og:description") (content ,desc))))]
-         [(and w (~ w'thumbnail))
-          => (^[image-url]
-               `(meta (@ (property "og:image") (content ,image-url))))]
+         [w `(link (@ (rel "canonical") (href ,url)))]
+         [w `(meta (@ (name "description") (content ,(~ w'description))))]
+         [w `(meta (@ (property "og:type") (content ,(if is-top "website" "article"))))]
+         [w `(meta (@ (property "og:url") (content ,url)))]
+         [w `(meta (@ (property "og:image") (content ,#"~(wiliki:url :top)/assets/top.png")))]
+         [w `(meta (@ (name "viewport") (content "width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0")))]
+         [w `(link (@ (rel "stylesheet") (href "https://use.fontawesome.com/releases/v5.15.4/css/all.css")))]
+         [w `(script (@ (src "https://cdn.jsdelivr.net/npm/lazyload@2.0.0-rc.2/lazyload.js")))]
+         [w `(script (@ (async "async") (src "https://www.googletagmanager.com/gtag/js?id=G-H5PNCVLGVB")))]
+         [w `(script (@ (async "async") (src "https://platform.twitter.com/widgets.js")))]
+         [w `(script (@ (async "async") (src "//cdn.iframe.ly/embed.js")))]
+         [w `(script (@ (src ,(string-append "assets/blog.js?" (substring (number->string (random-real)) 2 16)))))]
          [(and w (~ w'style-sheet))
           => @(^[ss] (map (^s `(link (@ (rel "stylesheet")
-                                        (href ,s) (type "text/css"))))
+                                        (href ,(string-append s "?" (substring (number->string (random-real)) 2 16))) (type "text/css"))))
                           (if (list? ss) ss (list ss))))])
       )))
 
@@ -459,8 +469,7 @@
                (list (wiliki:wikiname-anchor real-name))]
               [else
                `(,real-name
-                 (a (@ (href ,(url "p=~a&c=n" (cv-out real-name))))
-                    (span (@ (class new-wikiname-suffix)) "?")))]))
+                 (a (@ (href ,(url "p=~a&c=n" (cv-out real-name)))) "?"))]))
       )
   )
 
@@ -493,3 +502,4 @@
 (define html-page wiliki:std-page) ; for backward compatibility
 
 (provide "wiliki")
+

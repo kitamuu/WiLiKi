@@ -64,10 +64,12 @@
 ;; more than one entry per day.
 
 (define-module blog
-  (use srfi-1)
-  (use srfi-13)
-  (use srfi-19)
-  (use srfi-42)
+  (use gauche.parameter)
+  (use scheme.list)
+  (use srfi.13)
+  (use srfi.19)
+  (use srfi.27)
+  (use srfi.42)
   (use rfc.cookie)
   (use rfc.uri)
   (use rfc.http)
@@ -75,7 +77,6 @@
   (use text.tree)
   (use text.html-lite)
   (use util.match)
-  (use util.list)
   (use file.util)
   (use wiliki)
   (use wiliki.auth :prefix auth:)
@@ -84,8 +85,11 @@
   (use wiliki.edit)
   (use wiliki.rss)
   (use wiliki.log)
+  (use wiliki.macro)
   (export <blog> blog-option-ref))
 (select-module blog)
+(random-source-randomize! default-random-source)
+(autoload wiliki.macro decompose-key entry-title authenticated?)
 
 ;;;
 ;;; Authentication
@@ -121,17 +125,10 @@
                      (html:td (html:input :type "text" :name "user")))
                     (html:tr
                      (html:td "Password")
-                     (html:td (html:input :type "text" :name "pass")))
+                     (html:td (html:input :type "password" :name "pass")))
                     (html:tr
                      (html:td (html:input :type "submit" :name "submit"
                                           :value "login")))))))))))))
-
-(define (authenticated?)
-  (and-let* ([v (cgi-get-metavariable "HTTP_COOKIE")]
-             [c (parse-cookie-string v)]
-             [e (assoc "sess" c)])
-    (guard (e [(auth:<auth-failure> e) #f])
-      (auth:auth-get-session (cadr e)))))
 
 ;;;
 ;;; New entry
@@ -165,28 +162,6 @@
     [else #\a]))
 
 ;;;
-;;; Title extraction
-;;;
-(define (entry-title page-key page-content)
-  (define (trim s)
-    (with-string-io s
-      (^() (let loop ([i 0])
-             (let1 c (read-char)
-               (cond [(eof-object? c)]
-                     [(< i 20) (write-char c) (loop (+ i 1))] ;soft limit
-                     [(>= i 40) (display "...")] ;hard limit
-                     [(char-set-contains? #[[:alpha:]] c)
-                      (write-char c) (loop (+ i 1))]
-                     [else (display "...")]))))))
-  (cond
-   [(#/^\d{8}/ page-key)
-    (let1 line (with-input-from-string page-content read-line)
-      (rxmatch-if (#/^\* (.*)/ line) (_ item)
-        (tree->string (wiliki-remove-markup item))
-        (trim (tree->string (wiliki-remove-markup line)))))]
-   [else page-key]))
-
-;;;
 ;;; Index
 ;;;
 
@@ -205,11 +180,6 @@
   (getter-with-setter (^e (vector-ref e 3)) (^(e v) (vector-set! e 3 v))))
 
 (define *index-store* " blog-index")
-
-(define (decompose-key key)
-  (cond [(#/^(\d\d\d\d)(\d\d)(\d\d)/ key)
-         => (^m (list (x->integer(m 1)) (x->integer(m 2)) (x->integer(m 3))))]
-        [else #f]))
 
 (define (build-index)
   (define root (list #f))
@@ -317,13 +287,13 @@
 (define (rebuild-index-button)
   `((form (@ (method POST) (action ,(wiliki:url))
              (style "margin:0pt; padding:0pt"))
-          (input (@ (type hidden) (name c) (value rebuild-index)))
+          (input (@ (type hidden) (name p) (value rebuild-index)))
           (input (@ (type submit) (class navi-button) (value "Rebuild Index"))))))
 
 (define (show-index-button)
   `((form (@ (method POST) (action ,(wiliki:url))
              (style "margin:0pt; padding:0pt"))
-          (input (@ (type hidden) (name c) (value show-index)))
+          (input (@ (type hidden) (name p) (value show-index)))
           (input (@ (type submit) (class navi-button) (value "Show Index"))))))
 
 (define (manage-comments-button)
@@ -529,24 +499,30 @@
            (index-entry-key e)
            (index-entry-title e))))
   (define (entry-navi)
-    (cond-list
-     [show-navi
-      `(div (@ (class entry-navi))
+    (if show-navi
+      `((div (@ (class entry-navi))
             ,@(cond-list
                [(index-entry-prev entry)=> @(^p `("< " ,(entry-anchor p)))]
                [#t " | "]
-               [(index-entry-next entry)=> @(^n `(,(entry-anchor n) " >"))]))]))
+               [(index-entry-next entry)=> @(^n `(,(entry-anchor n) " >"))])))
+      `((div (@ (class entry-navi)) "> " (a (@ (href ,#"~(wiliki:url)/Archive/l0")) "エントリ一覧") " | "))))
   (let1 key (index-entry-key entry)
-    (rxmatch-let (#/^(\d\d\d\d)(\d\d)(\d\d)/ key)
-        (_ y m d)
-      `(,@(entry-navi)
-        (h1 (@ (class entry-date)) ,#"~|y|/~|m|/~|d|")
-        (div (@ (class permalink))
-             (a (@(href ,#"~(wiliki:url)/~key")) "#permalink"))))))
+    (let1 cl (number->string (exact (* (floor (/ (string-length (regexp-replace-all #/\[.+?\]|\|\||\s/ (~ (wiliki:db-get key #f)'content) "")) 100.0)) 100)))
+      (rxmatch-let (#/^(\d\d\d\d)(\d\d)(\d\d)/ key)
+          (_ y m d)
+        `(,@(entry-navi)
+          (header (@ (class "entry-header"))
+            (div (@ (class entry-date)) ,#"~|y|/~|m|/~|d|")
+            ,(if show-navi
+              ;;`(div (@ (class tweetbutton))
+              ;;     (a (@ (href "https://twitter.com/share?ref_src=twsrc%5Etfw") (class "twitter-share-button") (data-show-count "false")) "Tweet"))
+              `(div (@ (class content-length)) ,#"文章量：約~|cl|字")
+              `(div (@ (class permalink))
+                   (a (@(href ,#"~(wiliki:url)/~key")) "#permalink")))))))))
 
 (define (show-n-entries entries)
   (define dummy-page (make <blog-page>)) ;to make comment macro use compact form
-  (map (^e `(div (@ (class n-entry-show))
+  (map (^e `(article (@ (class n-entry-show))
                  ,@(entry-header e :show-navi #f)
                  ,@(let1 p (wiliki:db-get (index-entry-key e) #f)
                      (parameterize ([wiliki:page-stack
@@ -576,14 +552,14 @@
               (sort (map car (blog-index-root)) >)))))
 
 (define-reader-macro (recent-entries)
-  (define n 10)
+  (define n 6)
   `((ul (@ (class recent-entries))
         ,@(map (^e `(li (a (@ (href ,#"~(wiliki:url)/~(index-entry-key e)"))
                            ,(index-entry-title e))))
                (take-entries (blog-index-last) n index-entry-prev)))
     (p (a (@ (href ,#"~(wiliki:url)/Archive/l0")) "More..."))))
 
-(define *entries-in-page* 5)
+(define *entries-in-page* 3)
 (define *archive-links-in-page* 50)
 
 (define-reader-macro (top-page-contents)
@@ -609,7 +585,7 @@
     `(,@(show-yearly-links #f)
       ,@(show-archive-links es)
       ,@(cond-list
-         [(= (length es) n)
+	 [(= (length es) n)
           `(a (@ (href ,#"~(wiliki:url)/Archive/l~(+ s n)")) "More...")]))))
 
 (define-virtual-page (#/^Archive\/(\d{4})/ (_ year))
@@ -630,33 +606,34 @@
 
 (define-reader-macro (amazon-affiliate asin . opts)
   (define aid (blog-option-ref (wiliki) 'amazon-affiliate-id))
-  (define aid-us (blog-option-ref (wiliki) 'amazon-affiliate-id-us))
-  (let-macro-keywords* opts ([domain "jp"][float "left"])
-    (if (equal? domain "us")
-      #"<div class=\"amazon\" style=\"float:~|float|;\"><iframe src=\"https://rcm.amazon.com/e/cm?\
-          t=~|aid-us|&o=1&p=8&l=as1&asins=~|asin|&\
-          fc1=000000&IS2=1&lt1=_blank&m=amazon&lc1=0000FF&\
-          bc1=000000&bg1=FFFFFF&f=ifr\" style=\"width:120px;height:240px;\" \
-          scrolling=\"no\" marginwidth=\"0\" marginheight=\"0\" \
-          frameborder=\"0\"></iframe></div>"
-      #"<div class=\"amazon\" style=\"float:~|float|;\"><iframe src=\"https://rcm-jp.amazon.co.jp/e/cm?\
-          lt1=_blank&bc1=000000&IS2=1&nou=1&bg1=FFFFFF&\
-          fc1=000000&lc1=0000FF&t=~|aid|&\
-          o=9&p=8&l=as1&m=amazon&f=ifr&asins=~|asin|\" \
-          style=\"width:120px;height:240px;\" \
-          scrolling=\"no\" marginwidth=\"0\" marginheight=\"0\" \
-          frameborder=\"0\"></iframe></div>")))
-
-(define-reader-macro (amazon-affiliate-link asin text)
-  (define aid (blog-option-ref (wiliki) 'amazon-affiliate-id))
-  #"<a href=\"https://www.amazon.co.jp/gp/product/~|asin|?\
-      ie=UTF8&tag=~|aid|&linkCode=as2&camp=247&\
-      creative=1211&creativeASIN=~|asin|\">~|text|</a>")
+  (define ikey (blog-option-ref (wiliki) 'iframely-key-hash))
+    #"<div class=\"iframely-embed\"><div class=\"iframely-responsive\" style=\"height: 140px; width: 90%; margin: 0 auto; padding-bottom: 0;\">\
+        <a href=\"https://www.amazon.co.jp/dp/~|asin|&linkCode=ll1&tag=~|aid|&language=ja_JP&ref_=as_li_ss_tl\" \
+        data-iframely-url=\"//cdn.iframe.ly/api/iframe?url=https%3A%2F%2Fwww.amazon.co.jp%2Fdp%2F~|asin|%3F%26linkCode%3Dll1%26tag%3D~|aid|%26language%3Dja_JP%26ref_%3Das_li_ss_tl&key=~|ikey|\">\
+        </a></div></div>")
 
 (define-reader-macro (gist id)
   (if (#/^[\da-fA-F]+$/ id)
     #"<div style='font-size:75%'><a style=\"background-color: #ececec;\" href=\"https://gist.github.com/~|id|\">https://gist.github.com/~|id|</a><script src=\"https://gist.github.com/~|id|.js\"> </script><noscript><a href=\"https://gist.github.com/~|id|\">https://gist.github.com/~|id|</a></noscript></div>"
     ""))
+
+(define-reader-macro (embedly url)
+  #"<a class=\"embedly-card\" href=\"~|url|\"></a><script async src=\"//cdn.embedly.com/widgets/platform.js\" charset=\"UTF-8\"></script>")
+
+(define-reader-macro (hatena url)
+  #"<iframe class=\"hatenablogcard\" style=\"width:100%;height:155px;\" src=\"https://hatenablog-parts.com/embed?url=~|url|\" width=\"100%\" frameborder=\"0\" scrolling=\"no\"></iframe>")
+
+(define-reader-macro (tweet url)
+  #"<div class=\"twitter\"><blockquote class=\"twitter-tweet\"><a href=\"~|url|\"></a></blockquote></div>")
+
+(define-reader-macro (youtube id)
+  #"<div class=\"youtube\"><iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/~|id|\" title=\"YouTube video player\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe></div>")
+
+(define-reader-macro (misskey-note host id)
+  #"<iframe src=\"https://~|host|/embed/notes/~|id|\" data-misskey-embed-id=\"v1_~(number->string (random-real))\" loading=\"lazy\" referrerpolicy=\"strict-origin-when-cross-origin\" style=\"border: none; width: 100%; max-width: 500px; height: 300px; color-scheme: light dark;\"></iframe><script defer src=\"https://~|host|/embed.js\"></script>")
+
+(define-reader-macro (misskey-clip host id)
+  #"<iframe src=\"https://~|host|/embed/clips/~|id|\" data-misskey-embed-id=\"v1_~(number->string (random-real))\" loading=\"lazy\" referrerpolicy=\"strict-origin-when-cross-origin\" style=\"border: none; width: 100%; max-width: 500px; height: 300px; color-scheme: light dark;\"></iframe><script defer src=\"https://~|host|/embed.js\"></script>")
 
 (define-reader-macro (google-map title . params)
   (let-macro-keywords* params ([width 640] [height 480]
@@ -695,65 +672,77 @@
 
 (define-method wiliki:format-page-header ((fmt <blog-formatter>) page . opts)
   (define (td x) (list 'td x))
-  (cond-list
-   [(authenticated?) `(div (@ (style "font-size:80%;"))
-                           (table (tr
-                                   (td ,@(new-entry-button))
-                                   ,@(cond-list
-                                      [(wiliki:edit-link page) => td]
-                                      [(wiliki:history-link page) => td]
-                                      [(wiliki:all-link page) => td]
-                                      )
-                                   (td ,@(rebuild-index-button))
-                                   (td ,@(show-index-button))
-                                   (td ,@(manage-comments-button))
-                                   (td ,@(wiliki:search-box)))))]
-   [#t `(h1 (@ (class "blog-title"))
-            (a (@ (href ,(wiliki:url))) ,(~ (wiliki)'title)))]
-   ))
+  `((header (@ (class "site-header") (role "banner"))
+      ,@(cond-list
+         [(authenticated?)
+          `(div (@ (class "admin-menu"))
+                (table (tr (td ,@(new-entry-button))
+                           ,@(cond-list
+                              [(wiliki:edit-link page) => td]
+                              [(wiliki:history-link page) => td]
+                              [(wiliki:all-link page) => td])
+                           (td ,@(rebuild-index-button))
+                           (td ,@(show-index-button))
+                           (td ,@(manage-comments-button)))))])
+      (input (@ (type "checkbox") (id "menu-toggle") (class "menu-toggle") (style "display: none;")))
+      (label (@ (for "menu-toggle") (class "drawer-overlay")))
+      (label (@ (for "menu-toggle") (class "drawer-toggle drawer-hamburger"))
+             (span (@ (class "drawer-hamburger-icon"))))
+      (nav (@ (role "navigation") (class "drawer-nav"))
+           (div ,@(wiliki:search-box))
+           ,@(let loop ([in (wiliki:get-formatted-page-content "_SidePane")])
+               (cond [(null? in) '()]
+                     [(and (pair? (car in)) (eq? (caar in) 'h2))
+                      (let-values ([(content rest)
+                                    (span (lambda (x) (not (and (pair? x) (eq? (car x) 'h2)))) (cdr in))])
+                        (cons `(details (@ (class "menu-accordion"))
+                                        (summary (h2 ,@(let1 h2 (car in)
+                                                         (if (and (pair? (cdr h2)) (pair? (cadr h2)) (eq? (caadr h2) '@))
+                                                           (cddr h2)
+                                                           (cdr h2)))))
+                                        ,@content)
+                              (loop rest)))]
+                     [else (cons (car in) (loop (cdr in)))])))
+      (div (@ (class "blog-title"))
+           (a (@ (href ,(wiliki:url :top))) ,(~ (wiliki)'title))))))
 
 (define-method wiliki:format-page-footer ((fmt <blog-formatter>) page . opts)
-  `((hr)
-    (div (@ (class "footer"))
-         (a (@ (rel "license")
-               (href "https://creativecommons.org/licenses/by/3.0/"))
-            (img (@ (alt "Creative Commons License")
-                    (style "border-width:0")
-                    (src "https://i.creativecommons.org/l/by/3.0/88x31.png"))))
-         (br)
-         "This work by "
-         (a (@ (xmlns:cc "https://creativecommons.org/ns#")
-               (href ,(wiliki:url :full))
-               (property "cc:attributionName")
-               (rel "cc:attributionURL"))
-            ,(~ (wiliki)'author))
-         " is licensed under a "
-         (a (@ (rel "license")
-               (href "https://creativecommons.org/licenses/by/3.0/"))
-            "Creative Commons Attribution 3.0 Unported License")
-         (br)
-         "Last modified : " ,(wiliki:format-time (ref page 'mtime))
-         (br)
-         (a (@ (href "https://practical-scheme.net/wiliki/wiliki.cgi"))
-            "WiLiKi " ,(wiliki:version))
-         " running on "
-         (a (@ (href "https://practical-scheme.net/gauche/"))
-            "Gauche ",(gauche-version)))))
+  `((footer (@ (class "site-footer"))
+         (div (@ (class "footer-content"))
+           (div (@ (class "license-info"))
+             (a (@ (rel "license")
+                   (href "https://creativecommons.org/licenses/by-nc/4.0/"))
+                (img (@ (alt "Creative Commons License")
+                        (style "width:initial;")
+                        (src "https://licensebuttons.net/l/by-nc/4.0/88x31.png"))))
+             (span "This work by "
+                   (a (@ (href "https://misskey.osyakasyama.me/@pleasure666")
+                         (rel "me"))
+                      ,(~ (wiliki)'author))
+                   " is licensed under a "
+                   (a (@ (rel "license")
+                         (href "https://creativecommons.org/licenses/by-nc/4.0/"))
+                      "Creative Commons Attribution 4.0 Unported License")))
+           (div (@ (class "meta-info"))
+             (span "Last modified : " ,(wiliki:format-time (ref page 'mtime)))
+             (span (a (@ (href "https://practical-scheme.net/wiliki/wiliki.cgi"))
+                      "WiLiKi " ,(wiliki:version))
+                   " running on "
+                   (a (@ (href "https://practical-scheme.net/gauche/"))
+                      "Gauche ",(gauche-version))))
+           (div (@ (id "page_top")) (a (@ (href "#"))))))))
 
 (define-method wiliki:format-page-content ((fmt <blog-formatter>) page . opts)
   (let1 index-entry (get-index-entry (~ page'key))
-    `((table
-       (@ (border 0) (cellspacing 8) (width "100%") (class "content-table"))
-       (tr (td (@ (class "menu-strip")
-                  (valign "top"))
-               ,@(wiliki:get-formatted-page-content "_SidePane")
-               )
-           (td (@ (class "main-pane") (valign "top"))
-               (div (@ (class "content"))
-                    ,@(cond-list
-                       [index-entry @ (entry-header index-entry)])
-                    ,@(wiliki:format-content page))
-               ))))))
+    `((div (@ (class "site-content"))
+       (aside (@ (class "menu-strip") (role "complementary"))
+         (div ,@(wiliki:search-box))
+         ,@(wiliki:get-formatted-page-content "_SidePane"))
+       (main (@ (class "main-pane") (role "main"))
+         (article (@ (class "content"))
+           ,@(cond-list
+              [index-entry @ (entry-header index-entry)])
+           ,@(wiliki:format-content page)))))))
 
 ;;;
 ;;; Comment management
@@ -787,17 +776,11 @@
         (@ (class "manage-comment-entry"))
         (div (@ (class "comment-past"))
              (p (@ (class "comment-entry-title"))
-                (input (@ (type checkbox)
-                          (name ,(~(car page&ip)'key))
-                          (id  ,(~(car page&ip)'key))))
-                (label (@ (for ,(~(car page&ip)'key)))
-                       "Comment for " ,(parent-page-link parent-key)
-                       " from " ,(ip-ban-link (cdr page&ip))))
+                (input (@ (type checkbox) (name ,(~(car page&ip)'key))))
+                "Comment for " ,(parent-page-link parent-key)
+                " from " ,(cdr page&ip))
              ,@(parameterize ([wiliki:reader-macros '()])
                  (wiliki:format-content (car page&ip)))))))
-  (define (ip-ban-link ipaddr)
-    `(a (@ (href ,(wiliki:url "c=manage-comment-del&from-ip=~a" ipaddr)))
-        ,ipaddr))
   (define (parent-page-link parent-key)
     (let1 parent-page (wiliki:db-get parent-key)
       (if parent-page
@@ -821,29 +804,13 @@
                '()))))
       '())))
 
-(define-wiliki-action manage-comment-del :write (pagename
-                                                 params
-                                                 (from-ip :default #f)
-                                                 (confirm :default #f))
+(define-wiliki-action manage-comment-del :write (pagename params
+                                                          (confirm :default #f))
   (define (comment-entry key)
     `(div (@ (class manage-comment-entry))
           (div (@ (class comment-past))
                ,@(wiliki:get-formatted-page-content key))))
-  (define (keys-to-delete)
-    (if from-ip
-      (keys-of-comments-from-ip from-ip)
-      (filter #/^\|comments:/ (map car params))))
-  (define (keys-of-comments-from-ip from-ip)
-    ($ (cut take* <> 30)
-       $ filter-map (match-lambda [(_ pagename _ ip . _)
-                                   (and (equal? ip from-ip)
-                                        (wiliki:db-exists? pagename)
-                                        pagename)])
-       $ filter-map (^[ls] (and (string-prefix? "A" (cadr ls))
-                                (read-from-string #"(~(car ls))")))
-       $ wiliki-log-pick-from-file #/^\|comments:/
-       $ wiliki:log-file-path $ wiliki))
-  (let1 page-keys (keys-to-delete)
+  (let1 page-keys (filter #/^\|comments:/ (map car params))
     (if confirm
       (begin
         (dolist [page page-keys]

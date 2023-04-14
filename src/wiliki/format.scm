@@ -295,7 +295,7 @@
 (define-method wiliki:format-page ((fmt  <wiliki-formatter-base>)
                                    (page <wiliki-page>)
                                    . opts)
-  `(html
+  `(html (@ (lang "ja"))
     (head ,@(apply wiliki:format-head-elements fmt page opts))
     (body ,@(apply wiliki:format-page-body fmt page opts))))
 (define-method wiliki:format-page ((page <wiliki-page>) . opts)

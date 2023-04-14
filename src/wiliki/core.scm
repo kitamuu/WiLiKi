@@ -477,7 +477,7 @@
    (cgi-header
     :content-type #"text/html; charset=~(wiliki:output-charset)"
     :content-style-type  "text/css")
-   (html-doctype :type :transitional)
+   "<!DOCTYPE html>\n"
    (wiliki:sxml->stree (apply wiliki:format-page page args))))
 
 ;; Returns URL of the wiliki, with given parameters.
@@ -487,7 +487,7 @@
 ;;  (wiliki:url fmtstr arg ...) => using format to format the query
 ;;     string, then adds it to the url.  ARGs are first converted to
 ;;     string by x->string, then url-encoded.
-;;  (wiliki:url :full), (wiliki:url :full string),
+;;  (wiliki:url :top), (wiliki:url :full), (wiliki:url :full string),
 ;;  (wiliki:url :full fmtstr arg ...) => like above, but returns
 ;;     absolute url.
 
@@ -495,16 +495,22 @@
   (define (rel-base w)
     (sys-basename (or (~ w'proxy-script-name) (~ w'script-name))))
   (define (abs-base w)
-    (format "~a://~a~a~a"
-            (~ w'protocol)
+    ;;(format "~a://~a~a~a"
+    ;;        (~ w'protocol)
+    ;;        (~ w'server-name)
+    ;;        (if (or (and (= (~ w'server-port) 80)
+    ;;                     (string=? (~ w'protocol) "http"))
+    ;;                (and (= (~ w'server-port) 443)
+    ;;                     (string=? (~ w'protocol) "https")))
+    ;;          ""
+    ;;          #":~(~ w'server-port)")
+
+    ;; Fixed on https.
+    (format "https://~a~a"
             (~ w'server-name)
-            (if (or (and (= (~ w'server-port) 80)
-                         (string=? (~ w'protocol) "http"))
-                    (and (= (~ w'server-port) 443)
-                         (string=? (~ w'protocol) "https")))
-              ""
-              #":~(~ w'server-port)")
             (or (~ w'proxy-script-name) (~ w'script-name))))
+  (define (domain-base w)
+    (format "https://~a" (~ w'server-name)))
   (define (lang-spec language prefix)
     (if (equal? language (~ (wiliki)'language))
       ""
@@ -525,6 +531,7 @@
     [((? string? s)) (url-format #f s '())]
     [((? string? s) args ...) (url-format #f s args)]
     [(':full) (abs-base (wiliki))]
+    [(':top) (domain-base (wiliki))]
     [(':full (? string? s)) (url-format #t s '())]
     [(':full (? string? s) args ...) (url-format #t s args)]
     [else (error "invalid call to wiliki:url:" `(wiliki:url ,@args))]))

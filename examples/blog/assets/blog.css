@@ -1,0 +1,542 @@
+@import url('https://fonts.cdnfonts.com/css/sans-comic-sans');
+
+* {
+  padding: 0pt;
+  margin: 0pt;
+  box-sizing: border-box; /* 全ての要素でサイズ計算を正確にする */
+}
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-overflow-scrolling: touch; /* スムーズなスクロールを有効化 */
+}
+body {
+  font-family: verdana,ariel,helvetica,sans-serif;
+  color: rgb(199, 209, 216);
+  background-color: rgb(0, 0, 0);
+}
+
+:link    { text-decoration: none; color: rgb(68, 164, 193); }
+:visited { text-decoration: none; color: rgb(68, 164, 193); }
+
+footer { color: rgb(199, 209, 216); text-align: right; font-size: 60%; margin-right: 0.6em; }
+
+.blog-title {
+  display: block; font-size: 160%; color: rgb(172, 230, 0);
+  font-family: 'Sans Comic Sans', "Comic Sans MS", "Chalkboard SE", cursive;
+  font-weight: bold;
+  height: 100px; padding-top: 20px; padding-left: 20px;
+  background-image: url("/assets/shinrinkoen.jpeg");
+  background-repeat: no-repeat;
+  background-size: cover; /* 背景をしっかり埋める */
+}
+.blog-title a { color: #0000aa; }
+.entry-navi {
+    text-align: right; font-size: 70%; color: rgb(199, 209, 216);
+    margin: 0 1em 0 0;
+    padding-right: 3pt;
+}
+.entry-date {
+  display: block; font-size: 90%; color: rgb(199, 209, 216);
+  font-weight: bold;
+  margin: 0 1em 0 0;
+  border-bottom: solid thin;
+}
+.tweetbutton { text-align: right; padding-top: 5px; margin: 0 1em 0 0; }
+.content-length {
+  color: rgb(199, 209, 216);
+  margin: 0 1.5em 0 0;
+  text-align: right;
+  line-height: 20px;
+  font-size: 70%;
+  font-family: sohne, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.permalink { text-align: right; margin: 0 1em 0 0; padding-right: 3pt; }
+.permalink a {
+    font-size: 70%; padding: 0; margin: 0;
+}
+.n-entry-show { padding-bottom: 30px; }
+
+.amazon {
+  padding: 5px 10px 5px 10px;
+  position:relative;
+  float:left;
+}
+
+.youtube {
+  display: flex;
+  justify-content: center;
+}
+.youtube iframe{
+  width: 80%;
+  height: auto;
+  aspect-ratio: 16/9;
+}
+
+.twitter {
+  width: 95%;
+  display: flex;
+  justify-content: center;
+}
+
+#page_top{
+  width: 50px;
+  height: 50px;
+  position: fixed;
+  right: 13%;
+  bottom: -100px;
+  background: rgb(134, 179, 0);
+  border-radius: 50%;
+  z-index: 1000;
+}
+#page_top a{
+  position: relative;
+  display: block;
+  width: 50px;
+  height: 50px;
+  text-decoration: none;
+}
+#page_top a::before{
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  content: '\f102';
+  font-size: 25px;
+  color: #fff;
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  top: -5px;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  margin: auto;
+  text-align: center;
+}
+
+/*
+ * search box
+ */
+
+.search-form {
+  display: flex;
+  margin: 5pt;
+  justify-content: space-between; /* 子要素を両端に寄せる */
+  align-items: center;
+  overflow: hidden;
+  border: 2px solid rgb(34, 158, 130);
+  border-radius: 25px;
+  background-color: #fff;
+  gap: 0;
+}
+.search-box {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 5px 15px;
+  border: none;
+  margin: 0;
+  box-sizing: border-box;
+  font-size: 1em;
+  color: #000;
+  outline: none;
+  background: transparent; /* 親の背景色を活かす */
+}
+.search-button {
+  flex-shrink: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 35px;
+  height: 28px;
+  border: none;
+  background-color: rgb(34, 158, 130);
+  cursor: pointer;
+}
+.search-button:after {
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z' fill='%23fff'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  content: '';
+}
+
+/*
+ * table
+ */
+table.inbody { background: #ffffff; color: rgb(0, 0, 0); margin: 0.8em 1em 0.8em 1em; }   /* used in formatted body */
+table.preview { background: #eeeeff; color: rgb(0, 0, 0); }  /* used in preview page */
+
+/*
+ * Layout
+ */
+.site-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Side menu */
+.menu-strip { font-size: 80%; width: 230px; background: rgb(45, 45, 45); }
+.menu-strip h2 {
+  color: rgb(172, 230, 0);
+  margin: 0pt;
+  padding: 5pt 2pt 1pt 2pt;
+  font-size: 100%;
+  border: none;
+}
+.menu-strip p { margin : 0pt; padding: 3pt 3pt 3pt 10pt; }
+.menu-strip ul { margin: 0; padding: 0 0 0 5pt; list-style-type: none; }
+.menu-strip ul li { margin: 0; padding: 0; }
+
+/*
+ * Other tags
+ */
+h1, h2, h3, h4, h5 { margin: 0 0 10px 0; }
+h1 { text-align: left; font-size: 140%; color: rgb(34, 158, 130); border: none; }
+h2, h3, h4, h5 { text-align: left; color: rgb(34, 158, 130); background: transparent; }
+h2 { font-size: 120% }
+h3 { font-size: 110% }
+h4 { font-size: 100% }
+h5 { font-size: 100%; font-style: italic }
+
+hr {
+  border-top: 1px dashed #8c8b8b;
+  border-bottom: 1px dashed #fff;
+}
+
+pre {
+  width: calc(100% - 2em); /* 左右マージンの合計(2em)を引く */
+  max-width: calc(100% - 2em);
+  box-sizing: border-box;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: pre;
+  margin: 0.5em 1em; /* 本文(pタグ)と同じマージンに合わせる */
+  padding: 0.8em;
+  color: rgb(0, 0, 0);
+  font-family: monospace;
+  background-color: #ddeeee;
+  border: solid thin #aacccc;
+}
+pre.macroerror { background-color: #ee5555; }
+blockquote { border-left: solid thick rgb(255, 189, 62); margin: 0 1em 0.8em 2em; }
+
+p { margin: 0.8em 1em 0.8em 1em; }
+ul, ol { margin: 0 1em 1em 2.5em; }
+li { margin: 0 0 0.4em 0; }
+img { width: 100%; }
+
+p.archive-year-links { border-bottom: solid thin rgb(68, 164, 193); }
+p.archive-year-links span { font-size: 80%; padding: 0.1ex 0.7ex 0.1ex 0.7ex; }
+span.archive-year-link-hi { background-color: rgb(134, 179, 0); }
+span.archive-year-link-hi a { color: rgb(255, 255, 255); }
+span.archive-year-link-lo { /* default span style */ }
+
+span.wiliki-alert { background-color: #ff8080; } /* used to warn internal error */
+
+span.tag-anchor {
+  background-color: rgb(45, 45, 45); color: rgb(199, 209, 216);
+  font-size: 80%; font-style: italic;
+  clear: both;
+}
+
+/*
+ * sp menu logic
+ */
+.menu-toggle { display: none; }
+
+@media screen and (max-width: 1024px) and (orientation: portrait), screen and (max-width: 768px) {
+  .drawer-nav {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    right: -280px; /* 初期位置：画面外 */
+    width: 250px;
+    height: 100vh;
+    background: rgb(45, 45, 45);
+    z-index: 1001;
+    transition: transform 0.3s ease, visibility 0.3s;
+    visibility: hidden; /* 非表示時は存在を消す */
+    overflow-y: auto;
+    padding-top: 80px; /* 60px から 80px に増加 */
+  }
+
+  .drawer-nav .search-form {
+    margin: 10px 10pt 20px 10pt; /* 上下の余白を調整 */
+  }
+
+  .drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  /* チェックされた（ボタンが押された）時の挙動 */
+  .menu-toggle:checked ~ .drawer-nav {
+    transform: translateX(-280px); /* 画面内にスライド */
+    visibility: visible;
+  }
+
+  .menu-toggle:checked ~ .drawer-overlay {
+    display: block; /* オーバーレイ表示 */
+  }
+
+  .drawer-toggle {
+    display: block !important;
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 50px;
+    height: 50px;
+    z-index: 1002;
+    cursor: pointer;
+    background-color: rgb(34, 158, 130);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    transition: background-color 0.3s, transform 0.2s;
+  }
+  .drawer-toggle:active {
+    transform: scale(0.9);
+  }
+
+  /* アイコンを円の中心に正確に配置 */
+  .drawer-hamburger-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .menu-strip {
+    display: none !important;
+  }
+}
+
+@media screen and (min-width: 1025px), screen and (min-width: 769px) and (orientation: landscape) {
+  .drawer-toggle, .drawer-nav, .drawer-overlay {
+    display: none !important;
+  }
+  .menu-strip {
+    display: block !important;
+  }
+}
+
+/*
+ * sp menu icon
+ */
+.drawer-hamburger-icon,
+.drawer-hamburger-icon:after,
+.drawer-hamburger-icon:before {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background-color: white;
+  transition: all 0.3s;
+  position: absolute;
+}
+.drawer-hamburger-icon:before,
+.drawer-hamburger-icon:after {
+  content: '';
+}
+.drawer-hamburger-icon:before { top: -8px; }
+.drawer-hamburger-icon:after { top: 8px; }
+
+/* チェック時にアイコンを「×」に変える（任意ですが、あると分かりやすいです） */
+.menu-toggle:checked ~ .drawer-toggle .drawer-hamburger-icon {
+  background-color: transparent;
+}
+.menu-toggle:checked ~ .drawer-toggle .drawer-hamburger-icon:before {
+  transform: rotate(45deg);
+  top: 0;
+}
+.menu-toggle:checked ~ .drawer-toggle .drawer-hamburger-icon:after {
+  transform: rotate(-45deg);
+  top: 0;
+}
+
+.drawer-nav h2 {
+  display: inline-block;
+  color: rgb(172, 230, 0);
+  margin: 0pt;
+  padding: 10pt 0 5pt 0;
+  font-size: 110%;
+}
+
+/* アコーディオンの設定 */
+.menu-accordion {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 0 10pt;
+}
+.menu-accordion summary {
+  list-style: none; /* デフォルトの矢印を消す */
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  outline: none;
+}
+.menu-accordion summary::-webkit-details-marker {
+  display: none; /* Safari用のデフォルト矢印消し */
+}
+
+/* タブ（caret）の作成 */
+.menu-accordion summary::after {
+  content: '▼';
+  font-size: 70%;
+  color: rgb(172, 230, 0);
+  transition: transform 0.3s;
+}
+.menu-accordion[open] summary::after {
+  transform: rotate(180deg); /* 開いた時に上を向く */
+}
+
+.drawer-nav ul {
+  list-style: none;
+  padding: 0 0 10pt 10pt;
+}
+.drawer-nav li {
+  padding: 5pt 0;
+}
+.drawer-nav a {
+  color: rgb(68, 164, 193);
+  text-decoration: none;
+  display: block;
+}
+
+/*
+ * Footer Style
+ */
+.site-footer {
+  color: rgb(199, 209, 216);
+  font-size: 75%;
+  padding: 2em 1em;
+  border-top: 1px dashed #8c8b8b;
+  margin-top: 3em;
+}
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  align-items: flex-end;
+}
+.license-info, .meta-info {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5em;
+}
+.license-info img { width: auto; max-width: 88px; }
+
+/* Admin menu styles */
+.admin-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1001; /* blog-title (100) より上に */
+  background: rgba(45, 45, 45, 0.95);
+  border-bottom: 1px solid #555;
+}
+
+/* ログイン時はタイトルとメニューを下にずらす */
+body.authenticated .site-header .blog-title {
+  top: 30px; /* 管理メニューの高さ分 */
+}
+body.authenticated .menu-strip {
+  top: 160px; /* 130px + 30px */
+}
+body.authenticated .site-content {
+  padding-top: 160px;
+}
+
+/* PC Layout */
+@media screen and (min-width: 1025px), screen and (min-width: 769px) and (orientation: landscape) {
+  body {
+    padding-left: 0;
+    padding-bottom: 10pt;
+  }
+  .site-header .blog-title {
+    width: calc(100% - 20pt); /* 画面端まで使いつつ余裕を持たせる */
+    position: fixed;
+    top: 0;
+    left: 10pt;
+    z-index: 100;
+    background-size: cover; /* iOSで消えないように cover に変更 */
+    font-size: 240%;
+    padding-top: 15px;
+  }
+  .site-content {
+    display: block;
+    padding-top: 130px;
+    width: 100%;
+    margin: 0;
+  }
+  .site-footer {
+    width: 100%;
+    padding-left: 250px;
+  }
+  .menu-strip {
+    position: fixed;
+    top: 130px;
+    left: 10pt;
+    bottom: 0;
+    width: 230px;
+    overflow-y: auto;
+    display: block;
+    z-index: 90;
+  }
+  .main-pane {
+    padding-left: 250px;
+    padding-right: 20px;
+    min-height: 100vh;
+    width: 100%;
+    min-width: 0;
+  }
+  .main-pane pre {
+    width: calc(100% - 2em);
+    max-width: calc(100% - 2em);
+  }
+  .drawer-toggle, nav {
+    display: none !important;
+  }
+}
+
+/* Mobile Layout */
+@media screen and (max-width: 1024px) and (orientation: portrait), screen and (max-width: 768px) {
+  .site-header .blog-title {
+    background-size: cover;
+    height: 80px;
+    width: 100%;
+  }
+  .site-content {
+    width: 100%;
+  }
+  .main-pane {
+    width: 100%;
+    min-width: 0; /* 長い中身(pre等)による横幅の突き抜けを防止 */
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  .menu-strip {
+    display: none !important;
+  }
+  .drawer-toggle {
+    display: block !important;
+  }
+  pre {
+    margin: 0.5em 0;
+    width: 100%;
+    max-width: 100%;
+    font-size: 80%;
+  }
+}

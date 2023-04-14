@@ -26,6 +26,7 @@
 
 (define-module wiliki.macro
   (use gauche.sequence)
+  (use gauche.parameter)
   (use scheme.list)
   (use srfi.13)
   (use srfi.19)
@@ -34,8 +35,12 @@
   (use text.html-lite)
   (use text.tree)
   (use util.match)
+  (use rfc.cookie)
+  (use www.cgi)
+  (use wiliki.auth :prefix auth:)
   (use wiliki.core)
   (use wiliki.format)
+  (use wiliki.parse)
   (use wiliki.page)
   )
 (select-module wiliki.macro)
@@ -116,11 +121,11 @@
         `((div
            ,@(cond-list [float `(@ (style ,#"float:~float"))])
            (a (@ (style "display:inline-block;text-decolation:none"))
-              (img (@ (src ,url) (alt ,alt)))
+              (img (@ (class "lazyload") (data-src ,url) (alt ,alt)))
               (div (@ (style "text-align:center")) ,caption))))
         `((img
            ,@(cond-list [float `(@ (style ,#"float:~float"))])
-           (@ (src ,url) (alt ,alt)))))
+           (@ (class "lazyload") (data-src ,url) (alt ,alt)))))
       ;; If image isn't allowed to display, we just place a link.
       `((a (@ (href ,url)) ,alt)))))
 
@@ -159,20 +164,32 @@
             [else #f]))
         (%tag-update-cache tagname)))
 
-  `((h2 ,(format (gettext "Page(s) with tag ~s") tagname))
-    (ul
-     ,@(map (^[key&attr]
-              `(li ,@(wiliki:format-wikiname (car key&attr))
-                   "(" ,(how-long-since (get-keyword :mtime (cdr key&attr)))
-                   " ago)"))
-            (get-pages)))
-    (form (@ (method POST) (action ,(wiliki:url)))
-          ,(gettext "The list is cached and updated occasionally.")
-          (input (@ (type hidden) (name p) (value ,pagename)))
-          (input (@ (type hidden) (name c) (value tag-rescan)))
-          (input (@ (type submit) (name submit)
-                    (value ,(gettext "Update cache now")))))
-    ))
+  (if (authenticated?)
+      `((h2 ,(format (gettext "~s関連のエントリ") tagname))
+        (ul
+         ,@(map (^[key&attr]
+                  (let1 page (wiliki:db-get (car key&attr))
+                    `(li (a (@ (href ,#"~(wiliki:url)/~(car key&attr)"))
+                        ,(apply format "~4d/~2,'0d/~2,'0d" (decompose-key (car key&attr))) " : "
+                            ,(entry-title (car key&attr) (~ page 'content)))
+                       )))
+                (get-pages)))
+        (form (@ (method POST) (action ,(wiliki:url)))
+              ,(format (gettext "~sタグのエントリ一覧を更新") tagname)
+              (input (@ (type hidden) (name p) (value ,pagename)))
+              (input (@ (type hidden) (name c) (value tag-rescan)))
+              (input (@ (type submit) (name submit)
+                        (value ,(gettext "Update cache now"))))))
+      `((h2 ,(format (gettext "~s関連のエントリ") tagname))
+        (ul
+         ,@(map (^[key&attr]
+                  (let1 page (wiliki:db-get (car key&attr))
+                    `(li (a (@ (href ,#"~(wiliki:url)/~(car key&attr)"))
+                        ,(apply format "~4d/~2,'0d/~2,'0d" (decompose-key (car key&attr))) " : "
+                            ,(entry-title (car key&attr) (~ page 'content)))
+                       )))
+                (get-pages))))
+  ))
 
 (define-wiliki-action tag-rescan :write (pagename)
   (rxmatch-case pagename
@@ -405,6 +422,43 @@
                           (if (= num-comments 1) "" "s")
                           num-comments)))))
     ))
+
+;; <---- moved from blog.scm ---->
+
+;;;
+;;; Title extraction
+;;;
+(define (entry-title page-key page-content)
+  (define (trim s)
+    (with-string-io s
+      (^() (let loop ([i 0])
+             (let1 c (read-char)
+               (cond [(eof-object? c)]
+                     [(< i 20) (write-char c) (loop (+ i 1))] ;soft limit
+                     [(>= i 40) (display "...")] ;hard limit
+                     [(char-set-contains? #[[:alpha:]] c)
+                      (write-char c) (loop (+ i 1))]
+                     [else (display "...")]))))))
+  (cond
+   [(#/^\d{8}/ page-key)
+    (let1 line (with-input-from-string page-content read-line)
+      (rxmatch-if (#/^\* (.*)/ line) (_ item)
+        (tree->string (wiliki-remove-markup item))
+        (trim (tree->string (wiliki-remove-markup line)))))]
+   [else page-key]))
+
+(define (decompose-key key)
+  (cond [(#/^(\d\d\d\d)(\d\d)(\d\d)/ key)
+         => (^m (list (x->integer(m 1)) (x->integer(m 2)) (x->integer(m 3))))]
+        [else #f]))
+
+(define (authenticated?)
+  (and-let* ([v (cgi-get-metavariable "HTTP_COOKIE")]
+             [c (parse-cookie-string v)]
+             [e (assoc "sess" c)])
+    (guard (e [(auth:<auth-failure> e) #f])
+      (auth:auth-get-session (cadr e)))))
+;; <---- end of blog.scm methods ---->
 
 (define (comment-prefix id) #"|comments:~|id|::")
 
