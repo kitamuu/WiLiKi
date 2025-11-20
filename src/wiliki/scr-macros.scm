@@ -98,7 +98,7 @@
 #|
 (use rfc.http)
 (define (get-srfi-info kind) ; kind := final | withdrawn | draft
-  (receive (s h c) (http-get "srfi.schemers.org" #"/?statuses=~|kind|")
+  (receive (s h c) (http-get "srfi.schemers.org" #"/?statuses=~|kind|" :secure #t)
     (unless (string=? s "200")
       (errorf "couldn't retrieve ~a srfi data (~a)" kind s))
     (with-input-from-string c
@@ -316,8 +316,16 @@
     (242 . "The CFG Language")
     (244 . "Multiple-value Definitions")
     (247 . "Syntactic Monads")
+    (248 . "Minimal delimited continuations")
+    (250 . "Insertion-ordered hash tables")
     (251 . "Mixing groups of definitions with expressions within bodies")
-    (252 . "Property Testing")))
+    (252 . "Property Testing")
+    (253 . "Data (Type-)Checking")
+    (255 . "Restarting conditions")
+    (258 . "Uninterned symbols")
+    (259 . "Tagged procedures with type safety")
+    (260 . "Generated Symbols")
+    (264 . "String Syntax for Scheme Regular Expressions")))
 
 ;;---------------------------------------------------------------
 ;; Category macros
